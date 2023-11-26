@@ -59,10 +59,15 @@ let LoadHowsTheSeasonPage (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
         let! _ = tab.GotoAsync("https://climateapp.net.au/A03_HowsTheSeason")
+        
         let waitingLocator = tab.GetByText("Preparing analysis")
-        let! () = Assertions.Expect(waitingLocator).ToBeHiddenAsync()
+        let waitingOpts = LocatorWaitForOptions(State=WaitForSelectorState.Hidden)
+        let! () = waitingLocator.WaitForAsync(waitingOpts)
+        
         let readyLocator = tab.Locator(".analysis-content-ready")
-        let! () = readyLocator.WaitForAsync()
+        let readyOpts = LocatorWaitForOptions(State=WaitForSelectorState.Visible)
+        let! () = readyLocator.WaitForAsync(readyOpts)
+        
         return tab
     }
 
