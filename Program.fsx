@@ -12,7 +12,7 @@ DotNetEnv.Env.Load()
 
 let url = "https://climateapp.net.au/"
 
-let makeBrowserContext () =
+let MakeBrowserContext () =
     task {
         let! pw = Playwright.CreateAsync()
         let opts = BrowserTypeLaunchOptions(Headless = false)
@@ -20,7 +20,7 @@ let makeBrowserContext () =
         return! browser.NewContextAsync()
     }
 
-let makeTab url (browserContextT: Task<IBrowserContext>) =
+let MakeTab url (browserContextT: Task<IBrowserContext>) =
     task {
         let! context = browserContextT
         let! page = context.NewPageAsync()
@@ -28,7 +28,7 @@ let makeTab url (browserContextT: Task<IBrowserContext>) =
         return page
     }
 
-let setAuthCookie (browserContextT: Task<IBrowserContext>) =
+let SetAuthCookie (browserContextT: Task<IBrowserContext>) =
     task {
         let! context = browserContextT
 
@@ -55,26 +55,26 @@ let getUser (tabTask: Task<IPage>) =
         return! ele.TextContentAsync()
     }
 
-let loadHowsTheSeasonPage (tabTask: Task<IPage>) =
+let LoadHowsTheSeasonPage (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
         let! _ = tab.GotoAsync("https://climateapp.net.au/A03_HowsTheSeason")
         let waitingLocator = tab.GetByText("Preparing analysis")
         // let! () = Assertions.Expect(waitingLocator).Not.ToBeVisibleAsync()
         let! _ = tab.WaitForSelectorAsync(".analysis-content-ready")
-        let! () = tab.WaitForTimeoutAsync(50000f)
+        let! () = tab.WaitForTimeoutAsync(5000f)
         return tab
     }
-    
-let screenshotPage (tabTask: Task<IPage>) =
+
+let ScreenshotPage (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
-        let opts = PageScreenshotOptions(FullPage=true, Path="screenshot.jpg")
+        let opts = PageScreenshotOptions(FullPage = true, Path = "screenshot.jpg")
         let! _ = tab.ScreenshotAsync(opts)
         return tab
     }
-    
-let savePage (tabTask: Task<IPage>) =
+
+let SavePage (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
         let! content = tab.ContentAsync()
@@ -82,12 +82,20 @@ let savePage (tabTask: Task<IPage>) =
         return tab
     }
 
-makeBrowserContext ()
-|> setAuthCookie
-|> makeTab url
-|> loadHowsTheSeasonPage
-|> screenshotPage
-|> savePage
+let CloseBrowser (tabTask: Task<IPage>) =
+    task {
+        let! tab = tabTask
+        let browser = tab.Context.Browser
+        return! browser.CloseAsync()
+    }
+
+MakeBrowserContext ()
+|> SetAuthCookie
+|> MakeTab url
+|> LoadHowsTheSeasonPage
+|> ScreenshotPage
+|> SavePage
+|> CloseBrowser
 |> Async.AwaitTask
 |> Async.RunSynchronously
 |> Console.WriteLine
