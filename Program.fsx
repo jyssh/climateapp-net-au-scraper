@@ -48,37 +48,6 @@ let SetAuthCookie (browserContextT: Task<IBrowserContext>) =
         return context
     }
 
-module AnalysisPage =
-    type T =
-        | HowsTheSeason
-        
-    let ToUrl t =
-        match t with
-        | HowsTheSeason -> "https://climateapp.net.au/A03_HowsTheSeason"
-        
-    let ToStem t =
-        // stem is filename without extension
-        // https://stackoverflow.com/a/72803594
-        match t with
-        | HowsTheSeason -> "hows-the-season"
-    
-    let Load name (tabTask: Task<IPage>) =
-        let url = ToUrl name
-        task {
-            let! tab = tabTask
-            let! _ = tab.GotoAsync(url)
-            
-            let waitingLocator = tab.GetByText("Preparing analysis")
-            let waitingOpts = LocatorWaitForOptions(State=WaitForSelectorState.Hidden)
-            let! () = waitingLocator.WaitForAsync(waitingOpts)
-            
-            let readyLocator = tab.Locator(".analysis-content-ready")
-            let readyOpts = LocatorWaitForOptions(State=WaitForSelectorState.Visible)
-            let! () = readyLocator.WaitForAsync(readyOpts)
-            
-            return tab
-        }
-
 let SaveAsImage path (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
@@ -102,12 +71,76 @@ let CloseBrowser (tabTask: Task<IPage>) =
         return! browser.CloseAsync()
     }
 
+module AnalysisPage =
+    type T =
+        | HowsTheSeason
+        | HowOften
+        | HowWetNitrate
+        | PotentialYield
+        | Drought
+        | HowHotCold
+        | HowsThePast
+        | WhatTrend
+        
+    let ToUrl t =
+        match t with
+        | HowsTheSeason -> "https://climateapp.net.au/A03_HowsTheSeason"
+        | HowOften -> "https://climateapp.net.au/A01_HowOften"
+        | HowWetNitrate -> "https://climateapp.net.au/A04_HowWetN"
+        | PotentialYield -> "https://climateapp.net.au/A09_WhatYield"
+        | Drought -> "https://climateapp.net.au/A08_HowsTheDrought"
+        | HowHotCold -> "https://climateapp.net.au/A02_HowHotCold"
+        | HowsThePast -> "https://climateapp.net.au/A07_HowsThePast"
+        | WhatTrend -> "https://climateapp.net.au/A10_WhatTrend"
+        
+        
+    let ToStem t =
+        // stem is filename without extension
+        // https://stackoverflow.com/a/72803594
+        match t with
+        | HowsTheSeason -> "HowsTheSeason"
+        | HowOften -> "HowOften"
+        | HowWetNitrate -> "HowWetNitrate"
+        | PotentialYield -> "PotentialYield"
+        | Drought -> "Drought"
+        | HowHotCold -> "HowHotCold"
+        | HowsThePast -> "HowsThePast"
+        | WhatTrend -> "WhatTrend"
+    
+    let Load name (tabTask: Task<IPage>) =
+        let url = ToUrl name
+        task {
+            let! tab = tabTask
+            let! _ = tab.GotoAsync(url)
+            
+            let waitingLocator = tab.GetByText("Preparing analysis")
+            let waitingOpts = LocatorWaitForOptions(State=WaitForSelectorState.Hidden)
+            let! () = waitingLocator.WaitForAsync(waitingOpts)
+            
+            let readyLocator = tab.Locator(".analysis-content-ready")
+            let readyOpts = LocatorWaitForOptions(State=WaitForSelectorState.Visible)
+            let! () = readyLocator.WaitForAsync(readyOpts)
+            
+            return tab
+        }
+        
+    let Scrape name (tabTask: Task<IPage>) =
+        tabTask
+        |> Load name
+        |> SaveAsImage $"{ToStem name}.png"
+        |> SaveAsHtml $"{ToStem name}.html"
+
 MakeBrowserContext ()
 |> SetAuthCookie
 |> MakeTab url
-|> AnalysisPage.Load AnalysisPage.HowsTheSeason
-|> SaveAsImage $"{AnalysisPage.ToStem AnalysisPage.HowsTheSeason}.png"
-|> SaveAsHtml $"{AnalysisPage.ToStem AnalysisPage.HowsTheSeason}.html"
+|> AnalysisPage.Scrape AnalysisPage.HowsTheSeason
+|> AnalysisPage.Scrape AnalysisPage.HowOften
+|> AnalysisPage.Scrape AnalysisPage.HowWetNitrate
+|> AnalysisPage.Scrape AnalysisPage.PotentialYield
+|> AnalysisPage.Scrape AnalysisPage.Drought
+|> AnalysisPage.Scrape AnalysisPage.HowHotCold
+|> AnalysisPage.Scrape AnalysisPage.HowsThePast
+|> AnalysisPage.Scrape AnalysisPage.WhatTrend
 |> CloseBrowser
 |> Async.AwaitTask
 |> Async.RunSynchronously
