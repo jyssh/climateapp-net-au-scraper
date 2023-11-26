@@ -48,42 +48,50 @@ let SetAuthCookie (browserContextT: Task<IBrowserContext>) =
         return context
     }
 
-let getUser (tabTask: Task<IPage>) =
-    task {
-        let! tab = tabTask
-        let ele = tab.GetByTitle("Manage")
-        return! ele.TextContentAsync()
-    }
+module AnalysisPage =
+    type T =
+        | HowsTheSeason
+        
+    let ToUrl t =
+        match t with
+        | HowsTheSeason -> "https://climateapp.net.au/A03_HowsTheSeason"
+        
+    let ToStem t =
+        // stem is filename without extension
+        // https://stackoverflow.com/a/72803594
+        match t with
+        | HowsTheSeason -> "hows-the-season"
+    
+    let Load name (tabTask: Task<IPage>) =
+        let url = ToUrl name
+        task {
+            let! tab = tabTask
+            let! _ = tab.GotoAsync(url)
+            
+            let waitingLocator = tab.GetByText("Preparing analysis")
+            let waitingOpts = LocatorWaitForOptions(State=WaitForSelectorState.Hidden)
+            let! () = waitingLocator.WaitForAsync(waitingOpts)
+            
+            let readyLocator = tab.Locator(".analysis-content-ready")
+            let readyOpts = LocatorWaitForOptions(State=WaitForSelectorState.Visible)
+            let! () = readyLocator.WaitForAsync(readyOpts)
+            
+            return tab
+        }
 
-let LoadHowsTheSeasonPage (tabTask: Task<IPage>) =
+let SaveAsImage path (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
-        let! _ = tab.GotoAsync("https://climateapp.net.au/A03_HowsTheSeason")
-        
-        let waitingLocator = tab.GetByText("Preparing analysis")
-        let waitingOpts = LocatorWaitForOptions(State=WaitForSelectorState.Hidden)
-        let! () = waitingLocator.WaitForAsync(waitingOpts)
-        
-        let readyLocator = tab.Locator(".analysis-content-ready")
-        let readyOpts = LocatorWaitForOptions(State=WaitForSelectorState.Visible)
-        let! () = readyLocator.WaitForAsync(readyOpts)
-        
-        return tab
-    }
-
-let ScreenshotPage (tabTask: Task<IPage>) =
-    task {
-        let! tab = tabTask
-        let opts = PageScreenshotOptions(FullPage = true, Path = "screenshot.jpg", Animations=ScreenshotAnimations.Disabled)
+        let opts = PageScreenshotOptions(FullPage = true, Path = path, Animations=ScreenshotAnimations.Disabled)
         let! _ = tab.ScreenshotAsync(opts)
         return tab
     }
 
-let SavePage (tabTask: Task<IPage>) =
+let SaveAsHtml path (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
         let! content = tab.ContentAsync()
-        IO.File.WriteAllText("page.html", content)
+        IO.File.WriteAllText(path, content)
         return tab
     }
 
@@ -97,9 +105,9 @@ let CloseBrowser (tabTask: Task<IPage>) =
 MakeBrowserContext ()
 |> SetAuthCookie
 |> MakeTab url
-|> LoadHowsTheSeasonPage
-|> ScreenshotPage
-|> SavePage
+|> AnalysisPage.Load AnalysisPage.HowsTheSeason
+|> SaveAsImage $"{AnalysisPage.ToStem AnalysisPage.HowsTheSeason}.png"
+|> SaveAsHtml $"{AnalysisPage.ToStem AnalysisPage.HowsTheSeason}.html"
 |> CloseBrowser
 |> Async.AwaitTask
 |> Async.RunSynchronously
