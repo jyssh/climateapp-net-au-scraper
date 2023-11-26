@@ -74,7 +74,7 @@ let LoadHowsTheSeasonPage (tabTask: Task<IPage>) =
 let ScreenshotPage (tabTask: Task<IPage>) =
     task {
         let! tab = tabTask
-        let opts = PageScreenshotOptions(FullPage = true, Path = "screenshot.jpg")
+        let opts = PageScreenshotOptions(FullPage = true, Path = "screenshot.jpg", Animations=ScreenshotAnimations.Disabled)
         let! _ = tab.ScreenshotAsync(opts)
         return tab
     }
